@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KCNA Exam Simulator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KCNA Exam Simulator</h1>
+            <div id="timer">Time: 00:00:00</div>
+        </header>
+
+        <div id="welcome-screen">
+            <h2>Welcome to the KCNA Exam Simulator</h2>
+            <p>This simulator contains two sets of questions from the Kubernetes and Cloud Native Associate exam.</p>
+            <div class="exam-selection">
+                <button id="set1-btn" class="btn">Question Set 1 (60 Questions)</button>
+                <button id="set2-btn" class="btn">Question Set 2 (60 Questions)</button>
+            </div>
+            <div id="status-message" style="margin-top: 20px; color: #e74c3c;"></div>
+        </div>
+
+        <div id="exam-screen" class="hidden">
+            <div id="progress-bar">
+                <div id="progress"></div>
+            </div>
+            <div id="question-info">
+                <span id="question-number">Question 1 of 60</span>
+                <span id="question-nav">
+                    <button id="prev-btn" class="nav-btn" disabled>Previous</button>
+                    <button id="next-btn" class="nav-btn">Next</button>
+                </span>
+            </div>
+            <div id="question-container">
+                <h2 id="question-text"></h2>
+                <div id="options-container"></div>
+            </div>
+            <div id="question-list"></div>
+            <button id="submit-exam" class="btn">Submit Exam</button>
+        </div>
+
+        <div id="results-screen" class="hidden">
+            <h2>Exam Results</h2>
+            <div id="score-summary">
+                <div id="score"></div>
+                <div id="pass-fail"></div>
+            </div>
+            <div id="review-container">
+                <h3>Review Questions</h3>
+                <div id="review-questions"></div>
+            </div>
+            <button id="restart-btn" class="btn">Take Another Exam</button>
+        </div>
+    </div>
+
+    <script>
+        // Load question sets
+        const questionSets = {
+            questionSet1: null,
+            questionSet2: null
+        };
+
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const examScreen = document.getElementById('exam-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const set1Btn = document.getElementById('set1-btn');
+        const set2Btn = document.getElementById('set2-btn');
+        const statusMessage = document.getElementById('status-message');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const questionNumber = document.getElementById('question-number');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress');
+        const questionList = document.getElementById('question-list');
+        const submitExamBtn = document.getElementById('submit-exam');
+        const timerElement = document.getElementById('timer');
+        const scoreElement = document.getElementById('score');
+        const passFailElement = document.getElementById('pass-fail');
+        const reviewQuestionsElement = document.getElementById('review-questions');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Global variables
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
+        let examStartTime;
+        let timerInterval;
+        let examDuration = 90 * 60; // 90 minutes in seconds
+        let questionSetName = '';
+
+        // Preload question sets
+        function loadQuestionSets() {
+            statusMessage.textContent = "Loading question sets...";
+            
+            // Load Question Set 1
+            const xhr1 = new XMLHttpRequest();
+            xhr1.open('GET', 'data/questionSet1.json', true);
+            xhr1.onload = function() {
+                if (xhr1.status === 200) {
+                    try {
+                        questionSets.questionSet1 = JSON.parse(xhr1.responseText);
+                        console.log(`Loaded ${questionSets.questionSet1.length} questions for Set 1`);
+                        checkAllLoaded();
+                    } catch (error) {
+                        console.error('Error parsing questionSet1.json:', error);
+                        statusMessage.textContent = "Error loading Question Set 1. Please refresh the page.";
+                    }
+                } else {
+                    console.error('Failed to load questionSet1.json. Status:', xhr1.status);
+                    statusMessage.textContent = "Error loading Question Set 1. Please refresh the page.";
+                }
+            };
+            xhr1.onerror = function() {
+                console.error('Network error when loading questionSet1.json');
+                statusMessage.textContent = "Network error. Please check your connection and refresh the page.";
+            };
+            xhr1.send();
+            
+            // Load Question Set 2
+            const xhr2 = new XMLHttpRequest();
+            xhr2.open('GET', 'data/questionSet2.json', true);
+            xhr2.onload = function() {
+                if (xhr2.status === 200) {
+                    try {
+                        questionSets.questionSet2 = JSON.parse(xhr2.responseText);
+                        console.log(`Loaded ${questionSets.questionSet2.length} questions for Set 2`);
+                        checkAllLoaded();
+                    } catch (error) {
+                        console.error('Error parsing questionSet2.json:', error);
+                        statusMessage.textContent = "Error loading Question Set 2. Please refresh the page.";
+                    }
+                } else {
+                    console.error('Failed to load questionSet2.json. Status:', xhr2.status);
+                    statusMessage.textContent = "Error loading Question Set 2. Please refresh the page.";
+                }
+            };
+            xhr2.onerror = function() {
+                console.error('Network error when loading questionSet2.json');
+                statusMessage.textContent = "Network error. Please check your connection and refresh the page.";
+            };
+            xhr2.send();
+        }
+
+        function checkAllLoaded() {
+            if (questionSets.questionSet1 && questionSets.questionSet2) {
+                statusMessage.textContent = "Question sets loaded successfully. Choose a set to begin.";
+                statusMessage.style.color = "#2ecc71";
+                set1Btn.disabled = false;
+                set2Btn.disabled = false;
+            }
+        }
+
+        // Event Listeners
+        set1Btn.addEventListener('click', () => startExam('questionSet1'));
+        set2Btn.addEventListener('click', () => startExam('questionSet2'));
+        prevBtn.addEventListener('click', showPreviousQuestion);
+        nextBtn.addEventListener('click', showNextQuestion);
+        submitExamBtn.addEventListener('click', submitExam);
+        restartBtn.addEventListener('click', restartExam);
+
+        // Disable buttons until questions are loaded
+        set1Btn.disabled = true;
+        set2Btn.disabled = true;
+
+        // Functions
+        function startExam(setName) {
+            questionSetName = setName;
+            questions = questionSets[setName];
+            
+            // Limit to 60 questions if more are available
+            if (questions.length > 60) {
+                questions = questions.slice(0, 60);
+            }
+            
+            // Initialize user answers
+            userAnswers = Array(questions.length).fill(null);
+            
+            // Start timer
+            startTimer();
+            
+            // Show exam screen
+            welcomeScreen.classList.add('hidden');
+            examScreen.classList.remove('hidden');
+            
+            // Create question navigation
+            createQuestionNav();
+            
+            // Show first question
+            showQuestion(0);
+        }
+
+        function showQuestion(index) {
+            const question = questions[index];
+            questionText.textContent = question.question;
+            
+            // Update question number
+            questionNumber.textContent = `Question ${index + 1} of ${questions.length}`;
+            
+            // Clear options
+            optionsContainer.innerHTML = '';
+            
+            // Add options
+            question.options.forEach((option, i) => {
+                const optionElement = document.createElement('div');
+                optionElement.classList.add('option');
+                optionElement.textContent = `${String.fromCharCode(65 + i)}. ${option}`;
+                
+                // Check if this option is selected
+                if (userAnswers[index] === i) {
+                    optionElement.classList.add('selected');
+                }
+                
+                optionElement.addEventListener('click', () => {
+                    // Remove selected class from all options
+                    document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    optionElement.classList.add('selected');
+                    
+                    // Save user answer
+                    userAnswers[index] = i;
+                    
+                    // Update question navigation
+                    updateQuestionNav();
+                });
+                
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // Update navigation buttons
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === questions.length - 1;
+            
+            // Update progress bar
+            const progress = ((index + 1) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            
+            // Update current question in navigation
+            updateQuestionNav();
+            
+            // Update current index
+            currentQuestionIndex = index;
+        }
+
+        function showPreviousQuestion() {
+            if (currentQuestionIndex > 0) {
+                showQuestion(currentQuestionIndex - 1);
+            }
+        }
+
+        function showNextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                showQuestion(currentQuestionIndex + 1);
+            }
+        }
+
+        function createQuestionNav() {
+            questionList.innerHTML = '';
+            
+            for (let i = 0; i < questions.length; i++) {
+                const questionBtn = document.createElement('div');
+                questionBtn.classList.add('question-number');
+                questionBtn.textContent = i + 1;
+                
+                questionBtn.addEventListener('click', () => {
+                    showQuestion(i);
+                });
+                
+                questionList.appendChild(questionBtn);
+            }
+        }
+
+        function updateQuestionNav() {
+            const questionBtns = document.querySelectorAll('.question-number');
+            
+            questionBtns.forEach((btn, i) => {
+                // Remove all classes first
+                btn.classList.remove('current', 'answered');
+                
+                // Add current class if this is the current question
+                if (i === currentQuestionIndex) {
+                    btn.classList.add('current');
+                }
+                
+                // Add answered class if this question has been answered
+                if (userAnswers[i] !== null) {
+                    btn.classList.add('answered');
+                }
+            });
+        }
+
+        function startTimer() {
+            examStartTime = Date.now();
+            
+            timerInterval = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - examStartTime) / 1000);
+                const remainingSeconds = examDuration - elapsedSeconds;
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    submitExam();
+                    return;
+                }
+                
+                const hours = Math.floor(remainingSeconds / 3600);
+                const minutes = Math.floor((remainingSeconds % 3600) / 60);
+                const seconds = remainingSeconds % 60;
+                
+                timerElement.textContent = `Time: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function submitExam() {
+            // Stop timer
+            clearInterval(timerInterval);
+            
+            // Calculate score
+            let correctAnswers = 0;
+            
+            for (let i = 0; i < questions.length; i++) {
+                if (userAnswers[i] === questions[i].correctAnswer) {
+                    correctAnswers++;
+                }
+            }
+            
+            const score = (correctAnswers / questions.length) * 100;
+            const passed = score >= 66; // KCNA passing score is 66%
+            
+            // Display results
+            scoreElement.textContent = `You scored ${correctAnswers} out of ${questions.length} (${Math.round(score)}%)`;
+            passFailElement.textContent = passed ? 'PASSED!' : 'FAILED';
+            passFailElement.className = passed ? 'pass' : 'fail';
+            
+            // Generate review
+            generateReview();
+            
+            // Show results screen
+            examScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+        }
+
+        function generateReview() {
+            reviewQuestionsElement.innerHTML = '';
+            
+            for (let i = 0; i < questions.length; i++) {
+                const question = questions[i];
+                const userAnswer = userAnswers[i];
+                const isCorrect = userAnswer === question.correctAnswer;
+                
+                const reviewQuestion = document.createElement('div');
+                reviewQuestion.classList.add('review-question');
+                
+                // Question text
+                const questionHeader = document.createElement('h4');
+                questionHeader.textContent = `Question ${i + 1}: ${question.question}`;
+                reviewQuestion.appendChild(questionHeader);
+                
+                // Options
+                const reviewOptions = document.createElement('div');
+                reviewOptions.classList.add('review-options');
+                
+                question.options.forEach((option, j) => {
+                    const reviewOption = document.createElement('div');
+                    reviewOption.classList.add('review-option');
+                    reviewOption.textContent = `${String.fromCharCode(65 + j)}. ${option}`;
+                    
+                    if (j === question.correctAnswer) {
+                        reviewOption.classList.add('correct');
+                    } else if (j === userAnswer && j !== question.correctAnswer) {
+                        reviewOption.classList.add('incorrect');
+                    }
+                    
+                    reviewOptions.appendChild(reviewOption);
+                });
+                
+                reviewQuestion.appendChild(reviewOptions);
+                
+                // Explanation
+                const explanation = document.createElement('div');
+                explanation.classList.add('explanation');
+                explanation.textContent = question.explanation;
+                reviewQuestion.appendChild(explanation);
+                
+                reviewQuestionsElement.appendChild(reviewQuestion);
+            }
+        }
+
+        function restartExam() {
+            // Reset global variables
+            questions = [];
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            
+            // Show welcome screen
+            resultsScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        }
+
+        // Handle beforeunload event to warn user before leaving
+        window.addEventListener('beforeunload', (e) => {
+            if (examScreen.classList.contains('hidden')) {
+                return;
+            }
+            
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        });
+
+        // Load question sets when the page loads
+        document.addEventListener('DOMContentLoaded', loadQuestionSets);
+        // Start loading immediately as well (in case DOMContentLoaded already fired)
+        loadQuestionSets();
+    </script>
+</body>
+</html>
