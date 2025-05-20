@@ -90,10 +90,10 @@
       "Continuous Information / Continuous Development",
       "Continuous Integration / Continuous Development",
       "Cloud Integration / Cloud Development",
-      "Continuous Integration / Continuous Deployment"
+      "Continuous Integration / Continuous Delivery"
     ],
     "correctAnswer": 3,
-    "explanation": "The correct answer is D: Continuous Integration / Continuous Deployment"
+    "explanation": "The correct answer is D: Continuous Integration / Continuous Delivery"
   },
   {
     "id": 9,
