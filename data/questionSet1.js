@@ -1,4 +1,4 @@
-[
+const questionSet1Data = [
   {
     "id": 1,
     "question": "What native runtime is Open Container Initiative (OCI) compliant?",
@@ -767,4 +767,4 @@
     "correctAnswer": 1,
     "explanation": "The correct answer is B: Linkerd"
   }
-]
+];

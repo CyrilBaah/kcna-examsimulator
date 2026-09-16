@@ -1,4 +1,4 @@
-[
+const questionSet2Data = [
   {
     "id": 65,
     "question": "Which Kubernetes resource uses immutable: true boolean field?",
@@ -1163,4 +1163,4 @@
     "correctAnswer": 3,
     "explanation": "The correct answer is D: On failure"
   }
-]
+];

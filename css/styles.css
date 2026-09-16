@@ -53,6 +53,16 @@ h2 {
     gap: 20px;
 }
 
+.option-toggle {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #555;
+}
+
+.option-toggle input {
+    margin-right: 8px;
+}
+
 /* Buttons */
 .btn {
     padding: 12px 24px;
@@ -63,6 +73,11 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn:hover {
@@ -143,6 +158,33 @@ h2 {
     border-color: #3498db;
 }
 
+.option.correct {
+    border-color: #2ecc71;
+}
+
+.option.incorrect {
+    border-color: #e74c3c;
+}
+
+#answer-feedback {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 4px solid transparent;
+}
+
+#answer-feedback.correct-feedback {
+    background-color: rgba(46, 204, 113, 0.15);
+    border-left-color: #2ecc71;
+    color: #1e7e46;
+}
+
+#answer-feedback.incorrect-feedback {
+    background-color: rgba(231, 76, 60, 0.15);
+    border-left-color: #e74c3c;
+    color: #c0392b;
+}
+
 #question-list {
     display: flex;
     flex-wrap: wrap;
@@ -171,9 +213,24 @@ h2 {
     border: 2px solid #2c3e50;
 }
 
-#submit-exam {
-    display: block;
-    margin: 0 auto;
+#bottom-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.btn-muted {
+    background-color: #ecf0f1;
+    color: #7f8c8d;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+.btn-muted:hover {
+    background-color: #ddd;
+    color: #555;
 }
 
 /* Timer */
