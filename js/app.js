@@ -156,11 +156,11 @@ function showQuestion(index) {
     const progress = ((index + 1) / questions.length) * 100;
     progressBar.style.width = `${progress}%`;
 
-    // Update current question in navigation
-    updateQuestionNav();
-
     // Update current index
     currentQuestionIndex = index;
+
+    // Update current question in navigation
+    updateQuestionNav();
 }
 
 // Highlights the selected option red/green and shows the explanation,
